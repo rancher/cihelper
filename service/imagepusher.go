@@ -3,11 +3,12 @@ package service
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/docker/pkg/jsonmessage"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/versions"
@@ -89,9 +90,23 @@ func pushImage(image string, username string, password string) error {
 	if err != nil {
 		return err
 	}
-	io.Copy(os.Stdout, out)
 
 	defer out.Close()
+	dec := json.NewDecoder(out)
+	for {
+		var message jsonmessage.JSONMessage
+		if err := dec.Decode(&message); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		if message.Error != nil {
+			logrus.Errorln(message.ErrorMessage)
+			return fmt.Errorf("push image '%s' fail", image)
+		}
+		logrus.Infoln(message.Status)
+	}
 	return nil
 }
 
