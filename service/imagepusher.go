@@ -25,6 +25,7 @@ func AuthAndPush(apiClient *client.RancherClient, image string) error {
 	if err != nil {
 		return err
 	}
+	//logrus.Debugf("get auth:%v,%v,%v", image, username, password)
 	return pushImage(image, username, password)
 }
 
@@ -40,6 +41,7 @@ func getRegistryAuth(apiClient *client.RancherClient, image string) (string, str
 	for _, reg := range regCollection.Data {
 		if reg.ServerAddress == hostName {
 			regToPush = &reg
+			break
 		}
 	}
 	username, password := "", ""
@@ -55,6 +57,7 @@ func getRegistryAuth(apiClient *client.RancherClient, image string) (string, str
 		for _, regCred := range regCredCollection.Data {
 			if regCred.RegistryId == regToPush.Id {
 				regCredToPush = &regCred
+				break
 			}
 		}
 		if regCredToPush == nil {
@@ -101,11 +104,13 @@ func pushImage(image string, username string, password string) error {
 			}
 			return err
 		}
+		if message.Status != "" {
+			logrus.Infoln(message.Status)
+		}
 		if message.Error != nil {
 			logrus.Errorln(message.ErrorMessage)
 			return fmt.Errorf("push image '%s' fail", image)
 		}
-		logrus.Infoln(message.Status)
 	}
 	return nil
 }

@@ -8,15 +8,6 @@ import (
 )
 
 func PushImageCommand() cli.Command {
-	/*
-		flags := []cli.Flag{
-			cli.StringFlag{
-				Name:   "image",
-				Usage:  "Environment ENDPOINT URL",
-				EnvVar: "CATTLE_URL",
-			},
-		}
-	*/
 	return cli.Command{
 		Name:        "pushimage",
 		Usage:       "push an image using credential from rancher registries configuration",
