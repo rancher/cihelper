@@ -10,6 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/versions"
 	dclient "github.com/docker/docker/client"
 	"github.com/rancher/go-rancher/v2"
 	"golang.org/x/net/context"
@@ -72,7 +73,9 @@ func pushImage(image string, username string, password string) error {
 	if err != nil {
 		return err
 	}
-
+	if err := backwardVersion(cli); err != nil {
+		return err
+	}
 	authConfig := types.AuthConfig{
 		Username: username,
 		Password: password,
@@ -89,6 +92,23 @@ func pushImage(image string, username string, password string) error {
 	io.Copy(os.Stdout, out)
 
 	defer out.Close()
+	return nil
+}
+
+func backwardVersion(cli *dclient.Client) error {
+	ping, err := cli.Ping(context.Background())
+	if err != nil {
+		return err
+	}
+	// since the new header was added in 1.25, assume server is 1.24 if header is not present.
+	if ping.APIVersion == "" {
+		ping.APIVersion = "1.24"
+	}
+
+	// if server version is lower than the current cli, downgrade
+	if versions.LessThan(ping.APIVersion, cli.ClientVersion()) {
+		cli.UpdateClientVersion(ping.APIVersion)
+	}
 	return nil
 }
 
