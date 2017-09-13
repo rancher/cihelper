@@ -83,11 +83,12 @@ func pushImage(image string, username string, password string) error {
 	}
 	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
 	out, err := cli.ImagePush(ctx, image, types.ImagePushOptions{RegistryAuth: authStr})
-	defer out.Close()
 	if err != nil {
 		return err
 	}
 	io.Copy(os.Stdout, out)
+
+	defer out.Close()
 	return nil
 }
 
