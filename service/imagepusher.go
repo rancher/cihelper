@@ -104,14 +104,20 @@ func pushImage(image string, username string, password string) error {
 			}
 			return err
 		}
-		if message.Status != "" {
-			logrus.Infoln(message.Status)
+		//Do not print progress message
+		if message.ProgressMessage == "" && message.Status != "" {
+			msg := message.Status
+			if message.ID != "" {
+				msg = message.ID + ": " + msg
+			}
+			logrus.Infoln(msg)
 		}
 		if message.Error != nil {
 			logrus.Errorln(message.ErrorMessage)
-			return fmt.Errorf("push image '%s' fail", image)
+			return fmt.Errorf("Push image '%s' FAIL", image)
 		}
 	}
+	logrus.Infof("Push image '%s' SUCCESS", image)
 	return nil
 }
 
