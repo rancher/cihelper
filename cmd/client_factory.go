@@ -33,3 +33,9 @@ func (f *ClientFactory) GetClient(ctx *cli.Context) (*client.RancherClient, erro
 	}
 	return apiClient, nil
 }
+
+func check(e error) {
+	if e != nil {
+		logrus.Fatal(e)
+	}
+}

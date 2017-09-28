@@ -70,6 +70,8 @@ func main() {
 
 	app.Commands = []cli.Command{
 		cmd.PushImageCommand(),
+		cmd.UpgradeCommand(),
+		cmd.MergeYamlCommand(),
 	}
 
 	err := app.Run(os.Args)
