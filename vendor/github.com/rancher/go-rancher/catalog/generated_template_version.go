@@ -5,65 +5,33 @@ const (
 )
 
 type TemplateVersion struct {
-	Resource
+	Resource `yaml:"-"`
 
-	Actions map[string]interface{} `json:"actions,omitempty" yaml:"actions,omitempty"`
+	Actions map[string]string `json:"actions,omitempty" yaml:"actions,omitempty"`
 
-	Bindings map[string]interface{} `json:"bindings,omitempty" yaml:"bindings,omitempty"`
+	Bindings map[string]string `json:"bindings,omitempty" yaml:"bindings,omitempty"`
 
-	CatalogId string `json:"catalogId,omitempty" yaml:"catalog_id,omitempty"`
+	Files map[string]string `json:"files,omitempty" yaml:"files,omitempty"`
 
-	Category string `json:"category,omitempty" yaml:"category,omitempty"`
+	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 
-	DefaultVersion string `json:"defaultVersion,omitempty" yaml:"default_version,omitempty"`
-
-	Description string `json:"description,omitempty" yaml:"description,omitempty"`
-
-	Files map[string]interface{} `json:"files,omitempty" yaml:"files,omitempty"`
-
-	IconLink string `json:"iconLink,omitempty" yaml:"icon_link,omitempty"`
-
-	IsSystem string `json:"isSystem,omitempty" yaml:"is_system,omitempty"`
-
-	Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
-
-	License string `json:"license,omitempty" yaml:"license,omitempty"`
-
-	Links map[string]interface{} `json:"links,omitempty" yaml:"links,omitempty"`
-
-	Maintainer string `json:"maintainer,omitempty" yaml:"maintainer,omitempty"`
+	Links map[string]string `json:"links,omitempty" yaml:"links,omitempty"`
 
 	MaximumRancherVersion string `json:"maximumRancherVersion,omitempty" yaml:"maximum_rancher_version,omitempty"`
 
 	MinimumRancherVersion string `json:"minimumRancherVersion,omitempty" yaml:"minimum_rancher_version,omitempty"`
 
-	Name string `json:"name,omitempty" yaml:"name,omitempty"`
-
-	Output Output `json:"output,omitempty" yaml:"output,omitempty"`
-
-	Path string `json:"path,omitempty" yaml:"path,omitempty"`
-
-	ProjectURL string `json:"projectURL,omitempty" yaml:"project_url,omitempty"`
-
 	Questions []Question `json:"questions,omitempty" yaml:"questions,omitempty"`
 
-	ReadmeLink string `json:"readmeLink,omitempty" yaml:"readme_link,omitempty"`
-
-	TemplateBase string `json:"templateBase,omitempty" yaml:"template_base,omitempty"`
-
-	TemplateVersionRancherVersion map[string]interface{} `json:"templateVersionRancherVersion,omitempty" yaml:"template_version_rancher_version,omitempty"`
-
-	TemplateVersionRancherVersionGte map[string]interface{} `json:"templateVersionRancherVersionGte,omitempty" yaml:"template_version_rancher_version_gte,omitempty"`
+	TemplateId string `json:"templateId,omitempty" yaml:"template_id,omitempty"`
 
 	Type string `json:"type,omitempty" yaml:"type,omitempty"`
 
 	UpgradeFrom string `json:"upgradeFrom,omitempty" yaml:"upgrade_from,omitempty"`
 
-	UpgradeVersionLinks map[string]interface{} `json:"upgradeVersionLinks,omitempty" yaml:"upgrade_version_links,omitempty"`
+	UpgradeVersionLinks map[string]string `json:"upgradeVersionLinks,omitempty" yaml:"upgrade_version_links,omitempty"`
 
 	Version string `json:"version,omitempty" yaml:"version,omitempty"`
-
-	VersionLinks map[string]interface{} `json:"versionLinks,omitempty" yaml:"version_links,omitempty"`
 }
 
 type TemplateVersionCollection struct {

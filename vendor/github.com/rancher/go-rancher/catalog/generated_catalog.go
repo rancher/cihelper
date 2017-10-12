@@ -5,29 +5,25 @@ const (
 )
 
 type Catalog struct {
-	Resource
+	Resource `yaml:"-"`
 
-	Actions map[string]interface{} `json:"actions,omitempty" yaml:"actions,omitempty"`
+	Actions map[string]string `json:"actions,omitempty" yaml:"actions,omitempty"`
 
 	Branch string `json:"branch,omitempty" yaml:"branch,omitempty"`
 
-	CatalogRoot string `json:"catalogRoot,omitempty" yaml:"catalog_root,omitempty"`
+	Commit string `json:"commit,omitempty" yaml:"commit,omitempty"`
 
-	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+	EnvironmentId string `json:"environmentId,omitempty" yaml:"environment_id,omitempty"`
 
-	LastUpdated string `json:"lastUpdated,omitempty" yaml:"last_updated,omitempty"`
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
-	Links map[string]interface{} `json:"links,omitempty" yaml:"links,omitempty"`
+	Links map[string]string `json:"links,omitempty" yaml:"links,omitempty"`
 
-	Message string `json:"message,omitempty" yaml:"message,omitempty"`
-
-	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-
-	State string `json:"state,omitempty" yaml:"state,omitempty"`
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
 	Type string `json:"type,omitempty" yaml:"type,omitempty"`
 
-	Uri string `json:"uri,omitempty" yaml:"uri,omitempty"`
+	Url string `json:"url,omitempty" yaml:"url,omitempty"`
 }
 
 type CatalogCollection struct {
