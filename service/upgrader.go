@@ -16,7 +16,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gitlawr/cihelper/model"
 	"github.com/pkg/errors"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 var regTag = regexp.MustCompile(`^[\w]+[\w.-]*`)
@@ -49,7 +49,7 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 				if !strings.EqualFold(k, key) {
 					continue
 				}
-				if !strings.EqualFold(v.(string), value) {
+				if !strings.EqualFold(v, value) {
 					continue
 				}
 
@@ -63,7 +63,7 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 		newLaunchConfig := service.LaunchConfig
 		for k, v := range primaryLabels {
 			if strings.EqualFold(k, key) {
-				if strings.EqualFold(v.(string), value) {
+				if strings.EqualFold(v, value) {
 					primaryPresent = true
 					newLaunchConfig.ImageUuid = "docker:" + pushedImage
 					newLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
@@ -159,9 +159,9 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 			}
 			for k, v := range template.Files {
 				if strings.HasPrefix(k, "docker-compose") && config.DockerCompose == "" {
-					config.DockerCompose = v.(string)
+					config.DockerCompose = v
 				} else if strings.HasPrefix(k, "rancher-compose") && config.RancherCompose == "" {
-					config.RancherCompose = v.(string)
+					config.RancherCompose = v
 				}
 			}
 			// if config.Environment == nil && toUpgradeStack.Environment != nil {
@@ -176,13 +176,13 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 		}
 	}
 
-	stackUpgrade := &client.StackUpgrade{
-		DockerCompose:  config.DockerCompose,
-		RancherCompose: config.RancherCompose,
-		ExternalId:     config.ExternalId,
-		Environment:    config.Environment,
-	}
-	stack, err := apiClient.Stack.ActionUpgrade(toUpgradeStack, stackUpgrade)
+	composes := map[string]string{}
+	composes["dockercompose.yml"] = config.DockerCompose
+	composes["ranchercompose.yml"] = config.RancherCompose
+	stack, err := apiClient.Stack.Update(toUpgradeStack, client.Stack{
+		Templates:  composes,
+		ExternalId: config.ExternalId,
+	})
 
 	serviceIds := stack.ServiceIds
 
@@ -211,11 +211,13 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 		return errors.New("upgrade stack failed.")
 	}
 
-	_, err = apiClient.Stack.ActionFinishupgrade(stack)
-	if err != nil {
-		log.Errorf("Error %v in finishUpgrade of stack %s", err, stack.Name)
-		return err
-	}
+	/*
+		_, err = apiClient.Stack.ActionFinishupgrade(stack)
+		if err != nil {
+			log.Errorf("Error %v in finishUpgrade of stack %s", err, stack.Name)
+			return err
+		}
+	*/
 	log.Infof("upgrade stack '%s' success", stack.Name)
 	return nil
 }
@@ -299,7 +301,7 @@ func getTemplateLatestVersion(config *model.StackUpgrade, externalId string) (st
 	retV := ""
 	retRev := 0
 	for _, v := range tempObj.UpgradeVersionLinks {
-		extId := v.(string)[strings.LastIndex(v.(string), "/")+1:]
+		extId := v[strings.LastIndex(v, "/")+1:]
 		_, _, _, Rev, _ := TemplateURLPath(extId)
 		RevI, err := strconv.Atoi(Rev)
 		if err != nil {
