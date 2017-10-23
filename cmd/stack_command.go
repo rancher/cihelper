@@ -79,8 +79,8 @@ func upgradeStack(ctx *cli.Context) error {
 		ExternalId:      ctx.String("externalId"),
 		ToLatestCatalog: ctx.Bool("tolatest"),
 	}
-	service.UpgradeStack(apiClient, config)
-	return nil
+
+	return service.UpgradeStack(apiClient, config)
 }
 
 func parseCustomEnvFile(file string) map[string]interface{} {
