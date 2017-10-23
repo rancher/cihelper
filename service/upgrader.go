@@ -54,6 +54,7 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 				}
 
 				secLaunchConfig.ImageUuid = "docker:" + pushedImage
+				secLaunchConfig.Image = pushedImage
 				secLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
 				secConfigs = append(secConfigs, secLaunchConfig)
 				secondaryPresent = true
@@ -66,6 +67,7 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 				if strings.EqualFold(v, value) {
 					primaryPresent = true
 					newLaunchConfig.ImageUuid = "docker:" + pushedImage
+					newLaunchConfig.Image = pushedImage
 					newLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
 				}
 			}
@@ -104,16 +106,18 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 				return
 			}
 
-			if upgradedService.State != "upgraded" {
-				return
-			}
-
-			_, err = apiClient.Service.ActionFinishupgrade(upgradedService)
-			if err != nil {
-				log.Fatalf("Error %v in finishUpgrade of service %s", err, upgradedService.Id)
+			if upgradedService.State != "active" {
+				log.Fatalf("expect 'active' service state but got:%v", upgradedService.State)
 				return
 			}
 			log.Infof("upgrade service '%s' success", upgradedService.Name)
+			/*
+				_, err = apiClient.Service.ActionFinishupgrade(upgradedService)
+				if err != nil {
+					log.Fatalf("Error %v in finishUpgrade of service %s", err, upgradedService.Id)
+					return
+				}
+			*/
 		}(service, apiClient, newLaunchConfig, secConfigs, primaryPresent, secondaryPresent)
 	}
 }
