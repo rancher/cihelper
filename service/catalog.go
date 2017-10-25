@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/v3"
+	"github.com/rancher/go-rancher/v2"
 
 	"github.com/gitlawr/cihelper/git"
 	"github.com/gitlawr/cihelper/model"

@@ -16,7 +16,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gitlawr/cihelper/model"
 	"github.com/pkg/errors"
-	"github.com/rancher/go-rancher/v3"
+	"github.com/rancher/go-rancher/v2"
 )
 
 var regTag = regexp.MustCompile(`^[\w]+[\w.-]*`)
@@ -49,12 +49,12 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 				if !strings.EqualFold(k, key) {
 					continue
 				}
-				if !strings.EqualFold(v, value) {
+				if !strings.EqualFold(v.(string), value) {
 					continue
 				}
 
 				secLaunchConfig.ImageUuid = "docker:" + pushedImage
-				secLaunchConfig.Image = pushedImage
+				//secLaunchConfig.Image = pushedImage
 				secLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
 				secConfigs = append(secConfigs, secLaunchConfig)
 				secondaryPresent = true
@@ -64,10 +64,10 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 		newLaunchConfig := service.LaunchConfig
 		for k, v := range primaryLabels {
 			if strings.EqualFold(k, key) {
-				if strings.EqualFold(v, value) {
+				if strings.EqualFold(v.(string), value) {
 					primaryPresent = true
 					newLaunchConfig.ImageUuid = "docker:" + pushedImage
-					newLaunchConfig.Image = pushedImage
+					//newLaunchConfig.Image = pushedImage
 					newLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
 				}
 			}
@@ -106,18 +106,15 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 				return
 			}
 
-			if upgradedService.State != "active" {
-				log.Fatalf("expect 'active' service state but got:%v", upgradedService.State)
+			if upgradedService.State != "upgraded" {
+				return
+			}
+			_, err = apiClient.Service.ActionFinishupgrade(upgradedService)
+			if err != nil {
+				log.Fatalf("Error %v in finishUpgrade of service %s", err, upgradedService.Id)
 				return
 			}
 			log.Infof("upgrade service '%s' success", upgradedService.Name)
-			/*
-				_, err = apiClient.Service.ActionFinishupgrade(upgradedService)
-				if err != nil {
-					log.Fatalf("Error %v in finishUpgrade of service %s", err, upgradedService.Id)
-					return
-				}
-			*/
 		}(service, apiClient, newLaunchConfig, secConfigs, primaryPresent, secondaryPresent)
 	}
 }
@@ -138,8 +135,7 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 		}
 	}
 	if toUpgradeStack == nil {
-		log.Errorf("Stack %v is not found.", stackName)
-		return err
+		return fmt.Errorf("Stack %v is not found.", stackName)
 	}
 
 	if config.ToLatestCatalog {
@@ -180,13 +176,13 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 		}
 	}
 
-	composes := map[string]string{}
-	composes["dockercompose.yml"] = config.DockerCompose
-	composes["ranchercompose.yml"] = config.RancherCompose
-	stack, err := apiClient.Stack.Update(toUpgradeStack, client.Stack{
-		Templates:  composes,
-		ExternalId: config.ExternalId,
-	})
+	stackUpgrade := &client.StackUpgrade{
+		DockerCompose:  config.DockerCompose,
+		RancherCompose: config.RancherCompose,
+		ExternalId:     config.ExternalId,
+		Environment:    config.Environment,
+	}
+	stack, err := apiClient.Stack.ActionUpgrade(toUpgradeStack, stackUpgrade)
 
 	serviceIds := stack.ServiceIds
 
@@ -215,13 +211,12 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 		return errors.New("upgrade stack failed.")
 	}
 
-	/*
-		_, err = apiClient.Stack.ActionFinishupgrade(stack)
-		if err != nil {
-			log.Errorf("Error %v in finishUpgrade of stack %s", err, stack.Name)
-			return err
-		}
-	*/
+	_, err = apiClient.Stack.ActionFinishupgrade(stack)
+	if err != nil {
+		log.Errorf("Error %v in finishUpgrade of stack %s", err, stack.Name)
+		return err
+	}
+
 	log.Infof("upgrade stack '%s' success", stack.Name)
 	return nil
 }
