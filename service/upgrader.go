@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
+
 	"github.com/rancher/go-rancher/catalog"
 
 	log "github.com/Sirupsen/logrus"
@@ -143,14 +145,20 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 	}
 
 	if config.ToLatestCatalog {
+
+		logrus.Infof("trying to upgrade stack '%s' to latest catalog version", stackName)
+
 		if toUpgradeStack.ExternalId == "" {
 			log.Error("stack is not deployed from catalog")
 			return errors.New("stack is not deployed from catalog")
 		}
+		logrus.Infof("current catalog templat: %s", toUpgradeStack.ExternalId)
+
 		log.Infoln("refreshing catalog templates...")
 		if err = refreshCatalog(apiClient, config); err != nil {
 			return err
 		}
+		log.Infoln("refresh catalog templates done")
 		if config.ExternalId == "" {
 			latestExtId, err := getTemplateLatestVersion(config, toUpgradeStack.ExternalId)
 			if err != nil {
@@ -175,11 +183,12 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 		}
 
 		if config.ExternalId == toUpgradeStack.ExternalId {
-			log.Infoln("Latest template version already...")
+			log.Infoln("Got latest template '%s', latest template version already...\nDo no upgrade and end.", toUpgradeStack.ExternalId)
 			return nil
 		}
 	}
 
+	logrus.Infof("upgrading stack '%s' to '%s'", stackName, config.ExternalId)
 	composes := map[string]string{}
 	composes["dockercompose.yml"] = config.DockerCompose
 	composes["ranchercompose.yml"] = config.RancherCompose
@@ -211,7 +220,8 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 		return err
 	}
 
-	if stack.State != "upgraded" {
+	if stack.State != "active" {
+		logrus.Infof("expected active stack state but got:'%s'", stack.State)
 		return errors.New("upgrade stack failed.")
 	}
 
