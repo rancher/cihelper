@@ -139,14 +139,17 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 	}
 
 	if config.ToLatestCatalog {
+		log.Infof("trying to upgrade stack '%s' to latest catalog version", stackName)
 		if toUpgradeStack.ExternalId == "" {
 			log.Error("stack is not deployed from catalog")
 			return errors.New("stack is not deployed from catalog")
 		}
+		log.Infof("current catalog templat: %s", toUpgradeStack.ExternalId)
 		log.Infoln("refreshing catalog templates...")
 		if err = refreshCatalog(apiClient, config); err != nil {
 			return err
 		}
+		log.Infoln("refresh catalog templates done")
 		if config.ExternalId == "" {
 			latestExtId, err := getTemplateLatestVersion(config, toUpgradeStack.ExternalId)
 			if err != nil {
@@ -171,11 +174,11 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 		}
 
 		if config.ExternalId == toUpgradeStack.ExternalId {
-			log.Infoln("Latest template version already...")
+			log.Infoln("Got latest template '%s', latest template version already...\nDo no upgrade and end.", toUpgradeStack.ExternalId)
 			return nil
 		}
 	}
-
+	log.Infof("upgrading stack '%s' to '%s'", stackName, config.ExternalId)
 	stackUpgrade := &client.StackUpgrade{
 		DockerCompose:  config.DockerCompose,
 		RancherCompose: config.RancherCompose,
@@ -183,7 +186,6 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 		Environment:    config.Environment,
 	}
 	stack, err := apiClient.Stack.ActionUpgrade(toUpgradeStack, stackUpgrade)
-
 	serviceIds := stack.ServiceIds
 
 	for _, id := range serviceIds {
@@ -197,17 +199,18 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 			return err
 		}
 	}
-	/*
-		if err := apiClient.Reload(&stack.Resource, stack); err != nil {
-			return err
-		}
-	*/
+
+	if err := apiClient.Reload(&stack.Resource, stack); err != nil {
+		return err
+	}
+
 	if err := waitStack(apiClient, stack); err != nil {
 		log.Error(err.Error())
 		return err
 	}
 
 	if stack.State != "upgraded" {
+		log.Error("expected upgraded stack state but got:'%s'", stack.State)
 		return errors.New("upgrade stack failed.")
 	}
 
