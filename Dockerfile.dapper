@@ -11,8 +11,8 @@ RUN apt-get update && \
 ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm=armv6l GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
     GOPATH=/go PATH=/go/bin:/usr/local/go/bin:${PATH} SHELL=/bin/bash
 
-ADD http://dev-tool.oss-cn-shenzhen.aliyuncs.com/git/tools.tar.gz /tmp/tools.tar.gz
-RUN wget -O - http://dev-tool.oss-cn-shenzhen.aliyuncs.com/golang/go1.8.1.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
+RUN wget -O /tmp/tools.tar.gz http://dev-tool.oss-cn-shenzhen.aliyuncs.com/git/tools.tar.gz && \
+wget -O - http://dev-tool.oss-cn-shenzhen.aliyuncs.com/golang/go1.8.1.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
     go get github.com/rancher/trash && mkdir -p ${GOPATH}/src/golang.org/x/tools && cd ${GOPATH}/src/golang.org/x && tar -xzvf /tmp/tools.tar.gz && go get github.com/golang/lint/golint
  
 ENV DOCKER_URL_amd64=http://dev-tool.oss-cn-shenzhen.aliyuncs.com/docker/Linux/x86_64/docker-1.10.3 \
