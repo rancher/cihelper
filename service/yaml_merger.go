@@ -2,8 +2,11 @@ package service
 
 import (
 	// Base packages.
+
 	"fmt"
 	"reflect"
+
+	"github.com/Sirupsen/logrus"
 
 	// Third party packages.
 	"gopkg.in/yaml.v2"
@@ -14,11 +17,11 @@ func MergeYaml(yml1 []byte, yml2 []byte) ([]byte, error) {
 	var obj1 interface{}
 	var obj2 interface{}
 	if err := yaml.Unmarshal(yml1, &obj1); err != nil {
-		fmt.Printf("get error:%v", err)
+		logrus.Errorf("parse yaml got error:%v, please check file format:\n%s", err, string(yml1))
 		return nil, err
 	}
 	if err := yaml.Unmarshal(yml2, &obj2); err != nil {
-		fmt.Printf("get error:%v", err)
+		logrus.Errorf("parse yaml got error:%v, please check file format:\n%s", err, string(yml2))
 		return nil, err
 	}
 
@@ -28,7 +31,15 @@ func MergeYaml(yml1 []byte, yml2 []byte) ([]byte, error) {
 	} else if obj2 == nil {
 		res = obj1
 	} else {
-		res = MergeMap(obj1.(map[interface{}]interface{}), obj2.(map[interface{}]interface{}))
+		map1, ok := obj1.(map[interface{}]interface{})
+		if !ok {
+			return nil, fmt.Errorf("parse yaml fail, please check file format:\n%s", string(yml1))
+		}
+		map2, ok := obj2.(map[interface{}]interface{})
+		if !ok {
+			return nil, fmt.Errorf("parse yaml fail, please check file format:\n%s", string(yml2))
+		}
+		res = MergeMap(map1, map2)
 	}
 	//fmt.Printf("get map:%v", res)
 	out, err := yaml.Marshal(res)

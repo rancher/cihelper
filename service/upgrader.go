@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
+
 	"github.com/rancher/go-rancher/catalog"
 
 	log "github.com/Sirupsen/logrus"
@@ -32,29 +34,35 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 	batchSize := config.BatchSize
 	intervalMillis := config.IntervalMillis
 	startFirst := config.StartFirst
+	allService := []client.Service{}
 	services, err := apiClient.Service.List(&client.ListOpts{})
+	allService = append(allService, services.Data...)
+	for nextservices, err := services.Next(); nextservices != nil; services = nextservices {
+		allService = append(allService, nextservices.Data...)
+		if err != nil {
+			log.Fatalf("Error %v in listing services", err)
+		}
+	}
 	if err != nil {
 		log.Fatalf("Error %v in listing services", err)
-		return
 	}
-
-	for _, service := range services.Data {
+	toUpgradeCount := 0
+	for _, service := range allService {
 		secondaryPresent = false
 		primaryPresent = false
 		primaryLabels := service.LaunchConfig.Labels
 		secConfigs := []client.SecondaryLaunchConfig{}
 		for _, secLaunchConfig := range service.SecondaryLaunchConfigs {
 			labels := secLaunchConfig.Labels
-			for k, v := range labels {
-				if !strings.EqualFold(k, key) {
-					continue
+			found := true
+			for k, v := range serviceSelector {
+				if val, ok := labels[k]; !ok || !strings.EqualFold(val.(string), v) {
+					found = false
+					break
 				}
-				if !strings.EqualFold(v.(string), value) {
-					continue
-				}
-
+			}
+			if found {
 				secLaunchConfig.ImageUuid = "docker:" + pushedImage
-				//secLaunchConfig.Image = pushedImage
 				secLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
 				secConfigs = append(secConfigs, secLaunchConfig)
 				secondaryPresent = true
@@ -62,21 +70,24 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 		}
 
 		newLaunchConfig := service.LaunchConfig
-		for k, v := range primaryLabels {
-			if strings.EqualFold(k, key) {
-				if strings.EqualFold(v.(string), value) {
-					primaryPresent = true
-					newLaunchConfig.ImageUuid = "docker:" + pushedImage
-					//newLaunchConfig.Image = pushedImage
-					newLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
-				}
+		found := true
+		for k, v := range serviceSelector {
+			if val, ok := primaryLabels[k]; !ok || !strings.EqualFold(val.(string), v) {
+				found = false
+				break
 			}
+		}
+		if found {
+			primaryPresent = true
+			newLaunchConfig.ImageUuid = "docker:" + pushedImage
+			newLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
 		}
 
 		if !primaryPresent && !secondaryPresent {
 			continue
 		}
-
+		toUpgradeCount++
+		logrus.Infof("start upgrade service '%s'", service.Name)
 		func(service client.Service, apiClient *client.RancherClient, newLaunchConfig *client.LaunchConfig,
 			secConfigs []client.SecondaryLaunchConfig, primaryPresent bool, secondaryPresent bool) {
 			upgStrategy := &client.InServiceUpgradeStrategy{
@@ -97,7 +108,7 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 				InServiceStrategy: upgStrategy,
 			})
 			if err != nil {
-				log.Fatalf("Error %v in upgrading service %s", err, service.Id)
+				log.Fatalf("upgrading service '%s' error: %v", service.Name, err)
 				return
 			}
 
@@ -111,12 +122,17 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 			}
 			_, err = apiClient.Service.ActionFinishupgrade(upgradedService)
 			if err != nil {
-				log.Fatalf("Error %v in finishUpgrade of service %s", err, upgradedService.Id)
+				log.Fatalf("Error %v in finishUpgrade of service %s", err, upgradedService.Name)
 				return
 			}
 			log.Infof("upgrade service '%s' success", upgradedService.Name)
 		}(service, apiClient, newLaunchConfig, secConfigs, primaryPresent, secondaryPresent)
 	}
+	if toUpgradeCount == 0 {
+		jsonString, _ := json.Marshal(serviceSelector)
+		log.Fatalf("No service matches the selectors:%v, marked as failure", string(jsonString))
+	}
+	log.Infof("Upgraded %d services", toUpgradeCount)
 }
 
 //UpgradeStack currently works for catalog stack only
@@ -167,10 +183,10 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 					config.RancherCompose = v
 				}
 			}
-			// if config.Environment == nil && toUpgradeStack.Environment != nil {
-			// 	log.Infoln("using previous environment.")
-			// 	config.Environment = toUpgradeStack.Environment
-			// }
+			if config.Environment == nil && toUpgradeStack.Environment != nil {
+				log.Infoln("using previous environment.")
+				config.Environment = toUpgradeStack.Environment
+			}
 		}
 
 		if config.ExternalId == toUpgradeStack.ExternalId {
@@ -210,8 +226,8 @@ func UpgradeStack(apiClient *client.RancherClient, config *model.StackUpgrade) e
 	}
 
 	if stack.State != "upgraded" {
-		log.Error("expected upgraded stack state but got:'%s'", stack.State)
-		return errors.New("upgrade stack failed.")
+		log.Errorf("expected upgraded stack state but got:'%s'", stack.State)
+		return errors.New("upgrade stack failed")
 	}
 
 	_, err = apiClient.Stack.ActionFinishupgrade(stack)
@@ -335,7 +351,8 @@ func refreshCatalog(apiClient *client.RancherClient, config *model.StackUpgrade)
 }
 
 func wait(apiClient *client.RancherClient, service *client.Service) error {
-	for i := 0; i < 36; i++ {
+	logrus.Debugf("waiting for service '%s' finishing...", service.Name)
+	for {
 		if err := apiClient.Reload(&service.Resource, service); err != nil {
 			return err
 		}
@@ -347,16 +364,17 @@ func wait(apiClient *client.RancherClient, service *client.Service) error {
 
 	switch service.Transitioning {
 	case "yes":
-		return fmt.Errorf("service %s upgrade timeout", service.Id)
+		return fmt.Errorf("Service %s upgrade timeout", service.Name)
 	case "no":
 		return nil
 	default:
-		return fmt.Errorf("Service %s upgrade failed: %s", service.Id, service.TransitioningMessage)
+		return fmt.Errorf("Service %s upgrade failed: %s", service.Name, service.TransitioningMessage)
 	}
 }
 
 func waitStack(apiClient *client.RancherClient, stack *client.Stack) error {
-	for i := 0; i < 36; i++ {
+	logrus.Debugf("waiting for stack '%s' finishing...", stack.Name)
+	for {
 		if err := apiClient.Reload(&stack.Resource, stack); err != nil {
 			return err
 		}
@@ -368,11 +386,11 @@ func waitStack(apiClient *client.RancherClient, stack *client.Stack) error {
 
 	switch stack.Transitioning {
 	case "yes":
-		return fmt.Errorf("Timeout waiting for %s to finish", stack.Id)
+		return fmt.Errorf("Timeout upgrade stack %s", stack.Name)
 	case "no":
 		return nil
 	default:
-		return fmt.Errorf("Waiting for %s failed: %s", stack.Id, stack.TransitioningMessage)
+		return fmt.Errorf("Stack %s upgrade failed: %s", stack.Name, stack.TransitioningMessage)
 	}
 }
 

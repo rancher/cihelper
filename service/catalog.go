@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -19,12 +20,14 @@ import (
 	"github.com/gitlawr/cihelper/model"
 	"github.com/pkg/errors"
 	//from pipeline model
-	"github.com/rancher/pipeline/pipeline"
+
+	"github.com/rancher/pipeline/scm"
 )
 
 func GetGitToken(apiClient *client.RancherClient, username string) (string, error) {
 	filters := make(map[string]interface{})
-	filters["kind"] = "pipelineSetting"
+	filters["kind"] = "gitaccount"
+	filters["key"] = username
 	goCollection, err := apiClient.GenericObject.List(&client.ListOpts{
 		Filters: filters,
 	})
@@ -33,22 +36,14 @@ func GetGitToken(apiClient *client.RancherClient, username string) (string, erro
 		return "", err
 	}
 	if len(goCollection.Data) == 0 {
-		logrus.Errorf("No git auth found to upgrade catalog")
-		return "", errors.New("No git auth found to upgrade catalog")
+		return "", fmt.Errorf("cannot find authed account '%s'", username)
 	}
 	data := goCollection.Data[0]
-	setting := &pipeline.PipelineSetting{}
-	if err = json.Unmarshal([]byte(data.ResourceData["data"].(string)), &setting); err != nil {
-		logrus.Errorf("Error '%v' getting git auth", err)
+	account := &scm.Account{}
+	if err = json.Unmarshal([]byte(data.ResourceData["data"].(string)), &account); err != nil {
 		return "", err
 	}
-	for _, account := range setting.GithubAccounts {
-		if account.Login == username {
-			return account.AccessToken, nil
-		}
-	}
-
-	return "", errors.New("No git auth found to upgrade catalog")
+	return account.AccessToken, nil
 }
 
 func UpgradeCatalog(config *model.CatalogUpgrade) error {
