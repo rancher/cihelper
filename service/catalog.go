@@ -151,7 +151,11 @@ func generateNewTemplateVersion(repoPath string, config *model.CatalogUpgrade) e
 	repoUrl := config.GitUrl
 	if strings.HasPrefix(repoUrl, "https") {
 		if config.GitUser != "" && config.GitPassword != "" {
-			repoUrl = strings.Replace(repoUrl, "https://", "https://"+config.GitUser+":"+config.GitPassword+"@", 1)
+			userName, err := getUserName(config.GitUser)
+			if err != nil {
+				return err
+			}
+			repoUrl = strings.Replace(repoUrl, "https://", "https://"+userName+":"+config.GitPassword+"@", 1)
 		} else {
 			logrus.Fatalf("username/password for git repo not provided.\n")
 		}
@@ -163,6 +167,21 @@ func generateNewTemplateVersion(repoPath string, config *model.CatalogUpgrade) e
 	}
 
 	return nil
+}
+func getUserName(gitUser string) (string, error) {
+	splits := strings.Split(gitUser, ":")
+	if len(splits) != 2 {
+		return "", fmt.Errorf("invalid gituser format '%s'", gitUser)
+	}
+	scmType := splits[0]
+	userName := splits[1]
+	if scmType == "gitlab" {
+		return "oauth2", nil
+	} else if scmType == "github" {
+		return userName, nil
+	} else {
+		return "", fmt.Errorf("unsupported scmType '%s'", scmType)
+	}
 }
 
 //GetLatestVersion returns latest version in the catalog template path
