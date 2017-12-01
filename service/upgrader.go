@@ -63,7 +63,6 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 			}
 			if found {
 				secLaunchConfig.ImageUuid = "docker:" + pushedImage
-				secLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
 				secConfigs = append(secConfigs, secLaunchConfig)
 				secondaryPresent = true
 			}
@@ -80,7 +79,6 @@ func UpgradeServices(apiClient *client.RancherClient, config *model.ServiceUpgra
 		if found {
 			primaryPresent = true
 			newLaunchConfig.ImageUuid = "docker:" + pushedImage
-			newLaunchConfig.Labels["io.rancher.container.pull_image"] = "always"
 		}
 
 		if !primaryPresent && !secondaryPresent {
