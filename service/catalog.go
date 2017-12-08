@@ -98,7 +98,9 @@ func prepareGitRepoPath(config *model.CatalogUpgrade) (string, string, error) {
 		return "", "", errors.Wrap(err, "mkdir failed")
 	}
 
-	if err := git.Clone(repoPath, config.GitUrl, branch); err != nil {
+	repoUrl := getAuthRepoUrl(config.GitUrl, config.GitUser, config.GitPassword)
+
+	if err := git.Clone(repoPath, repoUrl, branch); err != nil {
 		return "", "", errors.Wrap(err, "Clone failed")
 	}
 
@@ -148,18 +150,7 @@ func generateNewTemplateVersion(repoPath string, config *model.CatalogUpgrade) e
 		}
 	}
 
-	repoUrl := config.GitUrl
-	if strings.HasPrefix(repoUrl, "https") {
-		if config.GitUser != "" && config.GitPassword != "" {
-			userName, err := getUserName(config.GitUser)
-			if err != nil {
-				return err
-			}
-			repoUrl = strings.Replace(repoUrl, "https://", "https://"+userName+":"+config.GitPassword+"@", 1)
-		} else {
-			logrus.Fatalf("username/password for git repo not provided.\n")
-		}
-	}
+	repoUrl := getAuthRepoUrl(config.GitUrl, config.GitUser, config.GitPassword)
 
 	if err = git.LazyPush(templatePath, repoUrl, config.GitBranch); err != nil {
 		logrus.Errorf("prepare new template version got error: %v", err)
@@ -182,6 +173,19 @@ func getUserName(gitUser string) (string, error) {
 	} else {
 		return "", fmt.Errorf("unsupported scmType '%s'", scmType)
 	}
+}
+
+func getAuthRepoUrl(url, user, token string) string {
+	if user != "" && token != "" {
+		userName, err := getUserName(user)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		url = strings.Replace(url, "://", "://"+userName+":"+token+"@", 1)
+	} else {
+		logrus.Fatalf("credential for git repo not provided.\n")
+	}
+	return url
 }
 
 //GetLatestVersion returns latest version in the catalog template path
