@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/gitlawr/cihelper/cmd"
+	"github.com/rancher/cihelper/cmd"
 	"github.com/urfave/cli"
 )
 

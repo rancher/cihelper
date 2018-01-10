@@ -16,7 +16,7 @@ import (
 	"github.com/rancher/go-rancher/catalog"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/gitlawr/cihelper/model"
+	"github.com/rancher/cihelper/model"
 	"github.com/pkg/errors"
 	"github.com/rancher/go-rancher/v2"
 )

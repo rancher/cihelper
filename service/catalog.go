@@ -16,8 +16,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/v2"
 
-	"github.com/gitlawr/cihelper/git"
-	"github.com/gitlawr/cihelper/model"
+	"github.com/rancher/cihelper/git"
+	"github.com/rancher/cihelper/model"
 	"github.com/pkg/errors"
 	//from pipeline model
 

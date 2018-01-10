@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/gitlawr/cihelper/model"
-	"github.com/gitlawr/cihelper/service"
+	"github.com/rancher/cihelper/model"
+	"github.com/rancher/cihelper/service"
 	"github.com/urfave/cli"
 )
 

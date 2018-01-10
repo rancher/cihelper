@@ -3,7 +3,7 @@ package cmd
 import (
 	"errors"
 
-	"github.com/gitlawr/cihelper/service"
+	"github.com/rancher/cihelper/service"
 	"github.com/urfave/cli"
 )
 

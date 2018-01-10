@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io/ioutil"
 
-	"github.com/gitlawr/cihelper/service"
+	"github.com/rancher/cihelper/service"
 	"github.com/urfave/cli"
 )
 
